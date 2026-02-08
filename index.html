@@ -12,7 +12,7 @@
             --dark: #1a1a1a;
             --light: #f4f4f9;
             --white: #ffffff;
-            --success: #28a745;
+            --success: #28a745; /* Green for trends */
             --warning: #ffc107;
             --danger: #dc3545;
             --text-grey: #666;
@@ -70,7 +70,11 @@
         .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .card { background: var(--white); padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .card h3 { font-size: 0.9rem; color: var(--text-grey); margin-bottom: 10px; }
-        .card .value { font-size: 1.8rem; font-weight: bold; }
+        .card .value { font-size: 1.8rem; font-weight: bold; margin-bottom: 5px; }
+        
+        /* RESTORED: Trend Styles (Green Text) */
+        .trend { font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+        .trend.up { color: var(--success); }
         
         /* AI Section */
         .ai-section { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #fff; padding: 25px; border-radius: 12px; margin-bottom: 30px; }
@@ -98,7 +102,7 @@
         .btn-primary:hover { opacity: 0.9; }
 
         @media (max-width: 768px) {
-            .sidebar { display: none; } /* Mobile sidebar hidden for simplicity */
+            .sidebar { display: none; }
         }
     </style>
 </head>
@@ -129,18 +133,22 @@
                 <div class="card">
                     <h3>Total Revenue</h3>
                     <div class="value" id="d-revenue">₱0.00</div>
+                    <div class="trend up">▲ All Time</div>
                 </div>
                 <div class="card">
                     <h3>Transactions</h3>
                     <div class="value" id="d-orders">0</div>
+                    <div class="trend up">▲ Processed</div>
                 </div>
                 <div class="card">
-                    <h3>Top Item</h3>
+                    <h3>Best Seller</h3>
                     <div class="value" id="d-top">...</div>
+                    <div class="trend up" id="d-top-count">0 Sold</div>
                 </div>
                 <div class="card">
-                    <h3>Avg Ticket</h3>
+                    <h3>Avg. Order Value</h3>
                     <div class="value" id="d-avg">₱0.00</div>
+                    <div class="trend up">▲ Per Customer</div>
                 </div>
             </div>
 
@@ -211,7 +219,6 @@
 
         <div id="settings" class="view-section">
             <div class="cards-grid" style="grid-template-columns: 1fr 1fr;">
-                
                 <div class="card">
                     <h3>Store Profile</h3>
                     <div class="form-group">
@@ -228,7 +235,6 @@
                     </div>
                     <button class="btn btn-primary">Save Changes</button>
                 </div>
-
                 <div class="card">
                     <h3>Application Preferences</h3>
                     <div class="form-group">
@@ -244,10 +250,6 @@
                             Export the 1,000 generated records for external auditing.
                         </p>
                         <button class="btn btn-primary" onclick="alert('Exporting 1000 rows to CSV...')">⬇ Download CSV</button>
-                    </div>
-                    <div class="form-group">
-                        <label style="color: var(--danger);">Danger Zone</label>
-                        <button class="btn" style="background: var(--danger); color: white;" onclick="alert('Data reset simulation only.')">Reset All Data</button>
                     </div>
                 </div>
             </div>
@@ -266,7 +268,7 @@
         ];
 
         let salesData = [];
-        let inventoryData = JSON.parse(JSON.stringify(MENU_ITEMS)); // Deep copy for inventory tracking
+        let inventoryData = JSON.parse(JSON.stringify(MENU_ITEMS)); 
 
         // --- 2. GENERATE 1000 DUMMY RECORDS ---
         function generateData() {
@@ -276,10 +278,8 @@
 
             for (let i = 0; i < 1000; i++) {
                 const randomItem = MENU_ITEMS[Math.floor(Math.random() * MENU_ITEMS.length)];
-                const qty = Math.floor(Math.random() * 3) + 1; // 1-3 items
+                const qty = Math.floor(Math.random() * 3) + 1; 
                 const date = new Date(startDate.getTime() + Math.random() * (new Date().getTime() - startDate.getTime()));
-                
-                // Simulate payment method
                 const method = Math.random() > 0.4 ? "Cash" : "GCash";
 
                 data.push({
@@ -293,26 +293,20 @@
                     day: date.toLocaleDateString('en-US', { weekday: 'long' })
                 });
             }
-            // Sort by date descending (newest first)
             return data.sort((a, b) => b.date - a.date);
         }
 
         // --- 3. PAGE NAVIGATION ---
         function switchView(viewId) {
-            // Hide all views
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-            
-            // Show selected view
             document.getElementById(viewId).classList.add('active');
             
-            // Highlight sidebar button (finding by onclick attribute is a bit hacky but works for simple demo)
             const btns = document.querySelectorAll('.nav-btn');
             btns.forEach(btn => {
                 if(btn.getAttribute('onclick').includes(viewId)) btn.classList.add('active');
             });
 
-            // Update Header Title
             const titles = {
                 'dashboard': 'Dashboard',
                 'history': 'Sales History',
@@ -328,18 +322,16 @@
         }
 
         // --- 4. RENDER FUNCTIONS ---
-        
         function renderDashboard() {
             const totalRevenue = salesData.reduce((sum, r) => sum + r.total, 0);
             const totalOrders = salesData.length;
             const avgOrder = totalRevenue / totalOrders;
 
-            // Count items
             const itemCounts = {};
             MENU_ITEMS.forEach(m => itemCounts[m.name] = 0);
             salesData.forEach(r => itemCounts[r.item] += r.qty);
 
-            // Find top item
+            // Find top item and its count
             let topItem = "";
             let maxVal = 0;
             for(let [k,v] of Object.entries(itemCounts)) {
@@ -350,26 +342,26 @@
             document.getElementById('d-revenue').innerText = '₱' + totalRevenue.toLocaleString();
             document.getElementById('d-orders').innerText = totalOrders.toLocaleString();
             document.getElementById('d-top').innerText = topItem;
+            // Update the new trend indicator with the count
+            document.getElementById('d-top-count').innerText = maxVal.toLocaleString() + ' Sold';
             document.getElementById('d-avg').innerText = '₱' + avgOrder.toFixed(2);
 
             // AI Insight Logic
             const weekendSales = salesData.filter(d => d.day === 'Saturday' || d.day === 'Sunday').length;
             const weekdaySales = totalOrders - weekendSales;
-            const ratio = (weekendSales/2) / (weekdaySales/5); // Wknd vs Wkday daily avg
+            const ratio = (weekendSales/2) / (weekdaySales/5); 
             
             document.getElementById('ai-insights-content').innerHTML = `
                 <p>• <strong>Demand Spike:</strong> Weekends are <span class="highlight">${ratio.toFixed(1)}x busier</span> than weekdays. Prep 30% more Bulalo on Fridays.</p>
                 <p>• <strong>Revenue Forecast:</strong> Projected to hit <span class="highlight">₱${(totalRevenue/6).toFixed(0)}</span> next month based on 6-month trend.</p>
             `;
 
-            // Render Charts
             renderCharts(itemCounts, salesData);
         }
 
         function renderHistory() {
             const tbody = document.getElementById('history-body');
             tbody.innerHTML = '';
-            // Limit to first 100 for performance in this demo, though 1000 is fine in modern browsers
             salesData.slice(0, 100).forEach(row => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -387,17 +379,13 @@
         function renderInventory() {
             const tbody = document.getElementById('inventory-body');
             tbody.innerHTML = '';
-            
-            // Calculate daily velocity (items sold per day approx)
-            // 6 months = approx 180 days
             const days = 180;
             let criticalItem = null;
 
             inventoryData.forEach(item => {
-                // Calculate how many of this item were sold in total
                 const totalSold = salesData.filter(d => d.item === item.name).reduce((a,b)=>a+b.qty,0);
                 const dailyAvg = totalSold / days;
-                const daysLeft = item.stock / (dailyAvg || 1); // avoid divide by zero
+                const daysLeft = item.stock / (dailyAvg || 1); 
 
                 let statusClass = 'good';
                 let statusText = 'In Stock';
@@ -426,8 +414,9 @@
         }
 
         function renderCharts(itemCounts, data) {
-            // Chart.js implementation
-            // 1. Doughnut
+            const chart1 = Chart.getChart("productMixChart");
+            if(chart1) chart1.destroy();
+            
             new Chart(document.getElementById('productMixChart'), {
                 type: 'doughnut',
                 data: {
@@ -440,24 +429,22 @@
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
             });
 
-            // 2. Line (Monthly)
             const monthlyData = {};
             data.forEach(d => {
                 const m = d.date.toLocaleString('default', { month: 'short' });
                 monthlyData[m] = (monthlyData[m] || 0) + d.total;
             });
 
-            // Sort months (rough logic for demo)
-            const labels = Object.keys(monthlyData); 
-            const values = Object.values(monthlyData);
+            const chart2 = Chart.getChart("revenueChart");
+            if(chart2) chart2.destroy();
 
             new Chart(document.getElementById('revenueChart'), {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: Object.keys(monthlyData),
                     datasets: [{
                         label: 'Monthly Sales',
-                        data: values,
+                        data: Object.values(monthlyData),
                         borderColor: '#8B0000',
                         tension: 0.4,
                         fill: true,
